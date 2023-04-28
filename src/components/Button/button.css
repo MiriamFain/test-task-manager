@@ -1,0 +1,27 @@
+.btn {
+    outline: none;
+    border: none;
+    padding: 5px;
+    border-radius: 50px;
+    overflow: hidden;
+    background: #2a2a2a;
+    color: #555;
+    transform: translate(0, 0);
+}
+
+.btn:hover {
+    color: #999;
+}
+
+.btn--icon {
+    border-radius: 40px;
+    padding: 8px;
+    min-width: 40px;
+    height: 40px;
+}
+
+.btn svg {
+    display: flex;
+    width: 25px;
+    height: 25px;
+}
