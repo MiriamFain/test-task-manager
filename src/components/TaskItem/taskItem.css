@@ -6,12 +6,6 @@
     color: #999;
 }
 
-.active,
-.btn-important:hover,
-.btn-urgent:hover {
-    opacity: 1;
-}
-
 .complete-desc {
     position: relative;
     color: #666;
@@ -76,6 +70,12 @@
     .btn-urgent {
         background-color: #d70202;
         opacity: 30%;
+    }
+
+    .active,
+    .btn-important:hover,
+    .btn-urgent:hover {
+        opacity: 1;
     }
 
     .task-edit__input {
@@ -160,6 +160,12 @@
         opacity: 30%;
     }
 
+    .active,
+    .btn-important:hover,
+    .btn-urgent:hover {
+        opacity: 1;
+    }
+
     .task-edit__input {
         outline: none;
         border: 0;
@@ -240,6 +246,12 @@
     .btn-urgent {
         background-color: #d70202;
         opacity: 30%;
+    }
+
+    .active,
+    .btn-important:hover,
+    .btn-urgent:hover {
+        opacity: 1;
     }
 
     .task-edit__input {

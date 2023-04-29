@@ -90,14 +90,14 @@ const TaskItem = ({
                                 Create at: {formattedCreatedDate}
                             </span>
                             {isCompleted ? (
-                                <span className="date ">
+                                <span className="date">
                                     Completed at: {formattedCompletedDate}
                                 </span>
                             ) : (
                                 ''
                             )}
                             {isDeleted ? (
-                                <span className="date ">
+                                <span className="date">
                                     Deleted at: {formattedDeletedDate}
                                 </span>
                             ) : (
