@@ -24,6 +24,7 @@ function App() {
     const [loading, setLoading] = useState(true);
 
     const [message, setMessage] = useState('');
+    const [isTaskProcessing, setIsTaskProcessing] = useState(false);
     const [timerId, setTimerId] = useState(null);
 
     const [page, setPage] = useState(1);
@@ -100,6 +101,10 @@ function App() {
     };
 
     const handleMarkComplete = async (taskId, isComplete) => {
+        if (isTaskProcessing) return;
+
+        setIsTaskProcessing(true);
+
         if (isComplete) {
             setMessage('Task completed');
             await markTaskAsCompleted(taskId);
@@ -117,6 +122,7 @@ function App() {
                     setTasks(updTasks);
                     setMessage('');
                     fetchTasks();
+                    setIsTaskProcessing(false);
                 },
                 isComplete ? 4000 : 0,
             ),
@@ -124,6 +130,8 @@ function App() {
     };
 
     const handleDelete = async taskId => {
+        if (isTaskProcessing) return;
+        setIsTaskProcessing(true);
         setMessage('Task deleted');
 
         setTimerId(
@@ -133,11 +141,13 @@ function App() {
                 setTasks(updTasks);
                 setMessage('');
                 fetchTasks();
+                setIsTaskProcessing(false);
             }, 4000),
         );
     };
 
     const clearTimeoutId = () => {
+        if (isTaskProcessing) return;
         clearTimeout(timerId);
         setMessage('');
     };
