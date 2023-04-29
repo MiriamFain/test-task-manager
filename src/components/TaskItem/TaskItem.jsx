@@ -15,12 +15,25 @@ const TaskItem = ({
     onComplete,
     handleEdit,
 }) => {
-    const { id, completed_at, description, created_at, important, urgent } =
-        task;
+    const {
+        id,
+        completed_at,
+        description,
+        created_at,
+        important,
+        urgent,
+        deleted_at,
+    } = task;
     const isCompleted = Boolean(completed_at);
+    const isDeleted = Boolean(deleted_at);
 
-    const momentObj = moment(created_at);
-    const formattedDate = momentObj.format('YYYY-MM-DD HH:mm:ss');
+    const createdDate = moment(created_at);
+    const completedDate = moment(completed_at);
+    const deletedDate = moment(deleted_at);
+
+    const formattedCreatedDate = createdDate.format('YYYY-MM-DD HH:mm:ss');
+    const formattedCompletedDate = completedDate.format('YYYY-MM-DD HH:mm:ss');
+    const formattedDeletedDate = completedDate.format('YYYY-MM-DD HH:mm:ss');
 
     const [newDesc, setNewDesc] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
@@ -66,8 +79,30 @@ const TaskItem = ({
                         </form>
                     ) : (
                         <>
-                            <span className="desc">{description}</span>
-                            <span className="date">{formattedDate}</span>
+                            <span
+                                className={`desc ${
+                                    isCompleted ? 'complete-desc' : ''
+                                }`}
+                            >
+                                {description}
+                            </span>
+                            <span className="date">
+                                Create at: {formattedCreatedDate}
+                            </span>
+                            {isCompleted ? (
+                                <span className="date ">
+                                    Completed at: {formattedCompletedDate}
+                                </span>
+                            ) : (
+                                ''
+                            )}
+                            {isDeleted ? (
+                                <span className="date ">
+                                    Deleted at: {formattedDeletedDate}
+                                </span>
+                            ) : (
+                                ''
+                            )}
                         </>
                     )}
                 </div>
@@ -77,26 +112,22 @@ const TaskItem = ({
                     ''
                 ) : (
                     <>
-                        <div>
-                            <button
-                                className={`btn-important ${
-                                    important ? 'active' : ''
-                                }`}
-                                onClick={() =>
-                                    handleMarkImportant(id, !important)
-                                }
-                            >
-                                Important
-                            </button>
-                            <button
-                                className={`btn-urgent ${
-                                    urgent ? 'active' : ''
-                                }`}
-                                onClick={() => handleMarkUrgent(id, !urgent)}
-                            >
-                                Urgent
-                            </button>
-                        </div>
+                        {/* <div> */}
+                        <button
+                            className={`btn-important ${
+                                important ? 'active' : ''
+                            }`}
+                            onClick={() => handleMarkImportant(id, !important)}
+                        >
+                            Important
+                        </button>
+                        <button
+                            className={`btn-urgent ${urgent ? 'active' : ''}`}
+                            onClick={() => handleMarkUrgent(id, !urgent)}
+                        >
+                            Urgent
+                        </button>
+                        {/* </div> */}
 
                         <Button
                             className="btn--icon"
