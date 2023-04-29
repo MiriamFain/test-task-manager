@@ -33,7 +33,7 @@ const TaskItem = ({
 
     const formattedCreatedDate = createdDate.format('YYYY-MM-DD HH:mm:ss');
     const formattedCompletedDate = completedDate.format('YYYY-MM-DD HH:mm:ss');
-    const formattedDeletedDate = completedDate.format('YYYY-MM-DD HH:mm:ss');
+    const formattedDeletedDate = deletedDate.format('YYYY-MM-DD HH:mm:ss');
 
     const [newDesc, setNewDesc] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
