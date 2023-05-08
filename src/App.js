@@ -1,210 +1,208 @@
-import { useState, useEffect, useCallback } from 'react';
-import './App.css';
-import TaskForm from './components/TaskForm';
-import TaskList from './components/TaskList';
-import Header from './components/Header';
-import Notification from './components/PopUp';
-import { BeatLoader } from 'react-spinners';
+import { useState } from "react";
+import "./App.css";
+import TaskForm from "./components/TaskForm";
+import TaskList from "./components/TaskList";
+import Header from "./components/Header";
+import Notification from "./components/PopUp";
+import { BeatLoader } from "react-spinners";
 import {
-    getTasks,
-    createTask,
-    deleteTask,
-    updateTask,
-    markTaskAsImportant,
-    unmarkTaskAsImportant,
-    markTaskAsUrgent,
-    unmarkTaskAsUrgent,
-    markTaskAsCompleted,
-    unmarkTaskAsCompleted,
-} from './api/tasks';
+  getTasks,
+  createTask,
+  deleteTask,
+  updateTask,
+  markTaskAsImportant,
+  unmarkTaskAsImportant,
+  markTaskAsUrgent,
+  unmarkTaskAsUrgent,
+  markTaskAsCompleted,
+  unmarkTaskAsCompleted,
+} from "./api/tasks";
+import { useMutation, useQuery, useQueryClient } from "react-query";
 
 function App() {
-    const [tasks, setTasks] = useState([]);
-    const [error, setError] = useState(null);
-    const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+  const [isTaskProcessing, setIsTaskProcessing] = useState(false);
+  const [timerId, setTimerId] = useState(null);
 
-    const [message, setMessage] = useState('');
-    const [isTaskProcessing, setIsTaskProcessing] = useState(false);
-    const [timerId, setTimerId] = useState(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
 
-    const [page, setPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(0);
+  const fetchTasks = async (page) => {
+    const {
+      data: { data, total, per_page },
+    } = await getTasks(page, 15);
+    const totalPages = Math.ceil(Number(total) / Number(per_page));
+    setTotalPages(totalPages);
+    return data;
+  };
 
-    const fetchTasks = useCallback(async () => {
-        try {
-            setLoading(true);
-            const {
-                data: { data, total, per_page },
-            } = await getTasks(page, 15);
-            const totalPages = Math.ceil(Number(total) / Number(per_page));
-            setTasks(prevTasks => {
-                //checks if last item in tasks array === last item of array that we got to prevent of adding the same data
-                const shouldUpdate =
-                    prevTasks.length === 0 ||
-                    (data.length > 0 &&
-                        data[data.length - 1]?.id !==
-                            prevTasks[prevTasks.length - 1]?.id);
-
-                return shouldUpdate ? [...prevTasks, ...data] : prevTasks;
-            });
-
-            setTotalPages(totalPages);
-            setLoading(false);
-        } catch (err) {
-            setError(err);
-            setLoading(false);
-        }
-    }, [page]);
-
-    useEffect(() => {
-        fetchTasks();
-    }, [fetchTasks, page]);
-
-    if (loading) {
-        return (
-            <div className="loader-container">
-                <BeatLoader color="#aaa" size={40} />
-            </div>
-        );
+  const {
+    isLoading,
+    error,
+    data: tasks,
+  } = useQuery(
+    ["tasks", page],
+    async () => {
+      let allTasks = [];
+      for (let i = 1; i <= page; i += 1) {
+        const data = await fetchTasks(i);
+        allTasks = [...allTasks, ...data];
+      }
+      return allTasks;
+    },
+    {
+      keepPreviousData: true,
     }
+  );
 
-    if (error) {
-        return <div>Error: {error.message}</div>;
+  const removeTask = async (taskId) => {
+    return new Promise((resolve) => {
+      setIsTaskProcessing(true);
+      setMessage("Task deleted");
+      setTimerId(
+        setTimeout(async () => {
+          await deleteTask(taskId);
+          setMessage("");
+          setIsTaskProcessing(false);
+          resolve();
+        }, 4000)
+      );
+    });
+  };
+
+  const markComplete = async ({ taskId, isComplete }) => {
+    return new Promise((resolve) => {
+      setIsTaskProcessing(true);
+      setMessage("Task completed");
+      setTimerId(
+        setTimeout(
+          async () => {
+            if (isComplete) {
+              await markTaskAsCompleted(taskId);
+            } else {
+              await unmarkTaskAsCompleted(taskId);
+            }
+            setMessage("");
+            setIsTaskProcessing(false);
+            resolve();
+          },
+          isComplete ? 4000 : 0
+        )
+      );
+    });
+  };
+
+  const client = useQueryClient();
+
+  const addTaskMutation = useMutation((task) => createTask(task), {
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ["tasks", page] });
+    },
+  });
+
+  const markCompleteMutation = useMutation(
+    async ({ taskId, isComplete }) =>
+      await markComplete({ taskId, isComplete }),
+    {
+      onSuccess: () => {
+        client.invalidateQueries({ queryKey: ["tasks", page] });
+      },
     }
+  );
 
-    const handleMarkImportant = async (taskId, isImportant) => {
-        if (isImportant) {
-            await markTaskAsImportant(taskId);
-        } else {
-            await unmarkTaskAsImportant(taskId);
-        }
-        const updTasks = tasks.map(task =>
-            task.id === taskId ? { ...task, important: isImportant } : task,
-        );
-        setTasks(updTasks);
+  const deleteTaskMutation = useMutation(
+    async (taskId) => await removeTask(taskId),
+    {
+      onSuccess: () => {
+        client.invalidateQueries({ queryKey: ["tasks", page] });
+      },
+    }
+  );
 
-        fetchTasks();
-    };
+  const editTaskMutation = useMutation(
+    async ({ taskId, description }) =>
+      await updateTask(taskId, { description }),
+    {
+      onSuccess: () => {
+        client.invalidateQueries({ queryKey: ["tasks", page] });
+      },
+    }
+  );
 
-    const handleMarkUrgent = async (taskId, isUrgent) => {
-        if (isUrgent) {
-            await markTaskAsUrgent(taskId);
-        } else {
-            await unmarkTaskAsUrgent(taskId);
-        }
-        const updTasks = tasks.map(task =>
-            task.id === taskId ? { ...task, urgent: isUrgent } : task,
-        );
-        setTasks(updTasks);
+  const markUrgentMutation = useMutation(
+    async ({ taskId, isUrgent }) => {
+      isUrgent
+        ? await markTaskAsUrgent(taskId)
+        : await unmarkTaskAsUrgent(taskId);
+    },
+    {
+      onSuccess: () => {
+        client.invalidateQueries({ queryKey: ["tasks", page] });
+      },
+    }
+  );
 
-        fetchTasks();
-    };
+  const markImportantMutation = useMutation(
+    async ({ taskId, isImportant }) => {
+      isImportant
+        ? await markTaskAsImportant(taskId)
+        : await unmarkTaskAsImportant(taskId);
+    },
+    {
+      onSuccess: () => {
+        client.invalidateQueries({ queryKey: ["tasks", page] });
+      },
+    }
+  );
 
-    const handleMarkComplete = async (taskId, isComplete) => {
-        if (isTaskProcessing) return;
+  const clearTimeoutId = () => {
+    if (!isTaskProcessing) return;
+    clearTimeout(timerId);
+    setMessage("");
+  };
 
-        setIsTaskProcessing(true);
+  const handleLoadMore = () => {
+    setPage((prevPage) => prevPage + 1);
+  };
 
-        if (isComplete) {
-            setMessage('Task completed');
-            await markTaskAsCompleted(taskId);
-        } else {
-            await unmarkTaskAsCompleted(taskId);
-        }
-
-        setTimerId(
-            setTimeout(
-                async () => {
-                    const completed_at = isComplete ? Date.now() : null;
-                    const updTasks = tasks.map(task =>
-                        task.id === taskId ? { ...task, completed_at } : task,
-                    );
-                    setTasks(updTasks);
-                    setMessage('');
-                    fetchTasks();
-                    setIsTaskProcessing(false);
-                },
-                isComplete ? 4000 : 0,
-            ),
-        );
-    };
-
-    const handleDelete = async taskId => {
-        if (isTaskProcessing) return;
-        setIsTaskProcessing(true);
-        setMessage('Task deleted');
-
-        setTimerId(
-            setTimeout(async () => {
-                await deleteTask(taskId);
-                const updTasks = tasks.filter(({ id }) => id !== taskId);
-                setTasks(updTasks);
-                setMessage('');
-                fetchTasks();
-                setIsTaskProcessing(false);
-            }, 4000),
-        );
-    };
-
-    const clearTimeoutId = () => {
-        if (isTaskProcessing) return;
-        clearTimeout(timerId);
-        setMessage('');
-    };
-
-    const handleEdit = async (taskId, description) => {
-        await updateTask(taskId, { description });
-        const updTasks = tasks.map(task =>
-            task.id === taskId ? { ...task, description } : task,
-        );
-        setTasks(updTasks);
-    };
-
-    const handleAddTask = async description => {
-        const taskData = {
-            description,
-            created_at: new Date().toISOString(),
-            important: false,
-            urgent: false,
-        };
-        const { data } = await createTask(taskData);
-        setTasks(prevTasks => {
-            const updatedTasks = [data, ...prevTasks];
-            return updatedTasks;
-        });
-    };
-    const handleLoadMore = () => {
-        setPage(prevPage => prevPage + 1);
-    };
-
-    return (
+  return (
+    <>
+      {isLoading && (
+        <div className="loader-container">
+          <BeatLoader color="#aaa" size={40} />
+        </div>
+      )}
+      {error && <div>Error: {error.message}</div>}
+      {!isLoading && !error && (
         <>
-            <Header />
-            <main>
-                <div className="g-row">
-                    {message && (
-                        <Notification text={message} onClick={clearTimeoutId} />
-                    )}
+          <Header />
+          <main>
+            <div className="g-row">
+              {message && (
+                <Notification text={message} onClick={clearTimeoutId} />
+              )}
 
-                    <TaskForm onAddTask={handleAddTask} />
-                    <TaskList
-                        tasks={tasks}
-                        handleMarkImportant={handleMarkImportant}
-                        handleMarkUrgent={handleMarkUrgent}
-                        handleDelete={handleDelete}
-                        handleMarkComplete={handleMarkComplete}
-                        handleEdit={handleEdit}
-                        page={page}
-                    />
-                    {page < totalPages && (
-                        <button className="load_more" onClick={handleLoadMore}>
-                            Load More
-                        </button>
-                    )}
-                </div>
-            </main>
+              <TaskForm onAddTask={addTaskMutation.mutate} />
+              <TaskList
+                tasks={tasks}
+                handleMarkImportant={markImportantMutation.mutate}
+                handleMarkUrgent={markUrgentMutation.mutate}
+                handleDelete={deleteTaskMutation.mutate}
+                handleMarkComplete={markCompleteMutation.mutate}
+                handleEdit={editTaskMutation.mutate}
+                page={page}
+              />
+              {page < totalPages && (
+                <button className="load_more" onClick={handleLoadMore}>
+                  Load More
+                </button>
+              )}
+            </div>
+          </main>
         </>
-    );
+      )}
+    </>
+  );
 }
 
 export default App;
